@@ -367,6 +367,31 @@ function renderDetailModal(){
 }
 
 function enqueue(op){state.queue.push(op);save();render()}
+function getPendingLocalRecords(){
+  const pendingLocalIds=new Set(state.queue.filter(op=>op.type==='upsert').map(op=>op.payload.local_id));
+  return state.records.filter(record=>pendingLocalIds.has(record.local_id));
+}
+function replaceStateFromRemote(remote){
+  const pendingRecords=getPendingLocalRecords();
+  const pendingDeleteIds=new Set(state.queue.filter(op=>op.type==='delete'&&op.firebase_id).map(op=>op.firebase_id));
+  const merged=new Map();
+  remote.forEach(item=>{
+    if(item.firebase_id&&pendingDeleteIds.has(item.firebase_id))return;
+    const key=item.local_id||item.firebase_id||uid();
+    merged.set(key,item);
+  });
+  pendingRecords.forEach(item=>{
+    const key=item.local_id||item.firebase_id||uid();
+    merged.set(key,item);
+  });
+  state.records=[...merged.values()];
+  if(state.activeProjectId&&!state.records.some(r=>r.type==='project'&&r.project_id===state.activeProjectId)){
+    state.activeProjectId=state.records.find(r=>r.type==='project')?.project_id||null;
+  }
+  if(selectedProjectId&&!state.records.some(r=>r.type==='project'&&r.project_id===selectedProjectId)){
+    closeDetailModal();
+  }
+}
 function mergeRemoteWithLocal(remote){
   const merged=new Map();
   remote.forEach(item=>{
@@ -409,8 +434,24 @@ async function ensureFirebase(){
   db=window.firebase.firestore();
   return true;
 }
+async function subscribeRemote(){
+  const ready=await ensureFirebase();
+  if(!ready)return false;
+  if(unsubscribe)unsubscribe();
+  unsubscribe=db.collection(collectionName).orderBy('created_at','desc').onSnapshot(snap=>{
+    const remote=snap.docs.map(doc=>({firebase_id:doc.id,...doc.data()}));
+    replaceStateFromRemote(remote);
+    save();
+    render();
+  });
+  return true;
+}
 async function sync(){
-  if(isSyncing||!state.queue.length||!navigator.onLine)return updateStatus();
+  if(isSyncing||!navigator.onLine)return updateStatus();
+  if(!state.queue.length){
+    await subscribeRemote();
+    return updateStatus();
+  }
   try{
     isSyncing=true;updateStatus();
     const ready=await ensureFirebase();
@@ -433,12 +474,7 @@ async function sync(){
     }
     state.queue=[];save();render();
     toast('Salvo no aparelho e enviado ao Firebase.');
-    if(unsubscribe)unsubscribe();
-    unsubscribe=db.collection(collectionName).orderBy('created_at','desc').onSnapshot(snap=>{
-      const remote=snap.docs.map(doc=>({firebase_id:doc.id,...doc.data()}));
-      mergeRemoteWithLocal(remote);
-      save();render();
-    });
+    await subscribeRemote();
   }catch(error){console.error(error)}finally{isSyncing=false;updateStatus()}
 }
 
