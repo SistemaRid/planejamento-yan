@@ -1,0 +1,18 @@
+{
+  "name": "Planejamento de Perfuracao",
+  "short_name": "Perfuracao",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0F172A",
+  "theme_color": "#0F172A",
+  "description": "Aplicativo de planejamento e acompanhamento de perfuracao com uso offline e sincronizacao automatica.",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

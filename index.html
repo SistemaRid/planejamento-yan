@@ -1,0 +1,871 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Planejamento de Perfuração</title>
+  <meta name="theme-color" content="#0f172a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icon.svg" type="image/svg+xml">
+  <style>
+    :root{--bg:#0f172a;--card:#1e293b;--line:#334155;--text:#f1f5f9;--muted:#94a3b8;--accent:#f97316;--ok:#166534;--warn:#854d0e;--bad:#7f1d1d}
+    *{box-sizing:border-box}body{margin:0;background:#0f172a;color:var(--text);font-family:Segoe UI,Tahoma,sans-serif}
+    button,input,textarea{font:inherit}
+    .app{max-width:760px;margin:0 auto;padding:10px}
+    .bar,.card,.modal,.drawer{background:rgba(30,41,59,.96);border:1px solid var(--line);border-radius:18px}
+    .bar{padding:12px;display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px;position:sticky;top:10px;z-index:5}
+    .title{font-size:18px;font-weight:800;line-height:1.15}.sub{font-size:12px;color:var(--muted)}
+    .actions{display:flex;align-items:center;gap:8px}
+    .status{padding:7px 10px;border-radius:999px;border:1px solid var(--line);font-size:11px;font-weight:700;white-space:nowrap}
+    .status.offline{background:#3f1111;color:#fecaca}.status.syncing{background:#3f2a11;color:#fde68a}.status.online{background:#0f2d1a;color:#bbf7d0}
+    .icon-btn,.tab,.btn{border:1px solid var(--line);border-radius:12px}
+    .icon-btn{width:42px;height:42px;background:#162132;color:var(--text);font-size:20px;font-weight:900;cursor:pointer}
+    .btn{width:100%;padding:11px 12px;background:var(--accent);color:#fff;font-weight:800;cursor:pointer}
+    .btn.alt{background:#334155}.btn.danger{background:#991b1b}.btn.inline{width:auto;white-space:nowrap}
+    .tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px}
+    .tab{padding:10px;background:#162132;color:var(--muted);font-weight:700;cursor:pointer}
+    .tab.active{background:var(--accent);color:#fff;border-color:transparent}
+    .main{display:flex;flex-direction:column;gap:10px}
+    .card{padding:14px}
+    .fields{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .full{grid-column:1/-1}
+    .label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}
+    .input,.textarea{width:100%;padding:11px 12px;background:#0f172a;color:var(--text);border:1px solid var(--line);border-radius:12px}
+    .textarea{min-height:92px;resize:vertical}
+    .stats{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .stat{padding:12px;border-radius:14px;background:#111b2c;border:1px solid var(--line)}
+    .stat.full{grid-column:1/-1}
+    .stat-label{font-size:12px;color:var(--muted)}.stat-value{display:block;font-size:23px;font-weight:800;margin-top:4px}
+    .stat.slim{display:flex;justify-content:space-between;align-items:center;padding:10px 14px}
+    .stat.slim .stat-label{font-size:18px;font-weight:800;color:#f8fafc}
+    .stat.slim .stat-value{margin-top:0;font-size:28px}
+    .muted{color:var(--muted)}.mono{font-family:Consolas,monospace}.hidden{display:none!important}
+    .list{display:flex;flex-direction:column;gap:10px}.item{padding:12px;border-radius:14px;background:#111b2c;border:1px solid var(--line);color:var(--text)}
+    .project-card{cursor:pointer;padding:16px;background:linear-gradient(180deg,#1a2740 0%,#131d31 100%);border:1px solid #40506a;box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 10px 30px rgba(2,6,23,.18);text-align:left}
+    .project-card:hover{border-color:#607494;transform:translateY(-1px);transition:.18s ease}
+    .project-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+    .project-name{font-size:19px;font-weight:800;letter-spacing:-.02em;color:#f8fafc;line-height:1.2}
+    .project-inline{display:flex;gap:8px;flex-wrap:nowrap;margin-top:12px;padding-top:12px;border-top:1px solid rgba(148,163,184,.14)}
+    .project-chip{display:inline-flex;align-items:center;gap:5px;min-width:0;padding:7px 10px;border-radius:999px;background:rgba(15,23,42,.66);border:1px solid rgba(148,163,184,.14);font-size:12px;color:#dbe7f5;white-space:nowrap;flex:1;justify-content:center}
+    .project-chip-label{font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#94a3b8}
+    .history-item{display:grid;grid-template-columns:minmax(96px,1fr) auto auto auto;align-items:center;gap:10px}
+    .history-date{font-weight:800;white-space:nowrap}
+    .history-holes{white-space:nowrap;justify-self:start}
+    .icon-action{width:34px;height:34px;display:inline-flex;align-items:center;justify-content:center;border-radius:10px;border:1px solid var(--line);background:#334155;color:#f8fafc;font-size:16px;font-weight:900;cursor:pointer}
+    .icon-action.danger{background:#991b1b}
+    .badge{padding:7px 11px;border-radius:999px;font-size:10px;font-weight:900;border:1px solid transparent;letter-spacing:.05em;text-transform:uppercase;white-space:nowrap}
+    .badge.done{background:rgba(34,197,94,.14);color:#bbf7d0;border-color:rgba(34,197,94,.25)}
+    .badge.pending{background:rgba(245,158,11,.14);color:#fde68a;border-color:rgba(245,158,11,.24)}
+    .row{display:flex;justify-content:space-between;align-items:center;gap:10px}
+    .toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:#14532d;color:#dcfce7;padding:12px 14px;border-radius:12px;opacity:0;transition:.2s;z-index:40;pointer-events:none}
+    .toast.show{opacity:1}
+    .overlay{position:fixed;inset:0;background:rgba(2,6,23,.62);backdrop-filter:blur(3px);z-index:20}
+    .drawer{position:fixed;top:0;right:0;height:100%;width:min(320px,88vw);padding:14px;z-index:21;overflow:auto}
+    .drawer-head,.modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+    .drawer .card{margin-bottom:12px}
+    .drawer-tabs{display:grid;grid-template-columns:1fr;gap:8px;margin-bottom:12px}
+    .modal-wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:10px;z-index:30}
+    .modal{width:min(680px,100%);max-height:92vh;overflow:auto;padding:16px}
+    .confirm-modal{width:min(420px,100%);padding:18px}
+    .mini-modal{width:min(380px,100%);padding:18px}
+    @media (max-width:640px){
+      .app{padding:8px}.sub{display:none}.tabs,.fields{grid-template-columns:1fr}.title{font-size:17px}
+      .actions .status{display:none}
+      .btn.inline{padding:10px;font-size:13px}
+      .project-name{font-size:17px}
+      .project-inline{gap:5px}
+      .project-chip{font-size:10px;padding:6px 7px;gap:4px}
+      .project-chip-label{font-size:9px;letter-spacing:.04em}
+      .history-item{grid-template-columns:minmax(82px,1fr) auto auto auto;gap:8px}
+      .icon-action{width:32px;height:32px}
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="bar">
+      <div>
+        <div class="title">Planejamento de Perfuração</div>
+        <div class="sub">Funciona offline e sincroniza quando a internet voltar</div>
+      </div>
+      <div class="actions">
+        <div id="sync-status" class="status offline">Modo offline</div>
+        <button id="open-project-modal" class="btn inline" type="button">Criar Planejamento</button>
+        <button id="open-drawer" class="icon-btn" type="button" aria-label="Abrir menu">☰</button>
+      </div>
+    </header>
+
+    <main class="main">
+      <section id="tab-planejamento" class="card">
+        <div id="planning-empty" class="muted">Toque em "Criar Planejamento" para cadastrar um novo planejamento.</div>
+        <div id="planning-list" class="list hidden"></div>
+      </section>
+    </main>
+  </div>
+
+  <div id="drawer-overlay" class="overlay hidden"></div>
+  <aside id="drawer" class="drawer hidden">
+    <div class="drawer-head">
+      <strong>Menu</strong>
+      <button id="close-drawer" class="icon-btn" type="button">×</button>
+    </div>
+    <section class="card">
+      <div class="row"><strong>Projeto ativo</strong><span id="drawer-project-name" class="muted">Nenhum</span></div>
+      <div id="drawer-summary" class="muted" style="margin-top:10px">Os dados ficam salvos no aparelho e entram na fila de sincronização.</div>
+    </section>
+    <section class="card">
+      <div class="row"><strong>Fila de envio</strong><span id="queue-count" class="mono">0</span></div>
+      <div style="margin-top:10px;display:flex;flex-direction:column;gap:8px">
+        <button id="sync-now" class="btn alt" type="button">Sincronizar agora</button>
+        <button id="clear-local" class="btn danger" type="button">Limpar local</button>
+      </div>
+    </section>
+  </aside>
+
+  <div id="project-modal-overlay" class="overlay hidden"></div>
+  <div id="project-modal-wrap" class="modal-wrap hidden">
+    <div class="modal">
+      <div class="modal-head">
+        <strong id="project-modal-title">Novo Planejamento</strong>
+        <button id="close-project-modal" class="icon-btn" type="button">×</button>
+      </div>
+      <form id="project-form" class="fields">
+        <div class="full">
+          <label class="label">Projeto / Frente</label>
+          <input class="input" id="project-name" required>
+        </div>
+        <div>
+          <label class="label">Total de furos</label>
+          <input class="input" id="project-holes" type="number" min="1" required>
+        </div>
+        <div>
+          <label class="label">Data de início</label>
+          <input class="input" id="project-start" type="date" required>
+        </div>
+        <div>
+          <label class="label">Data final</label>
+          <input class="input" id="project-end" type="date" required>
+        </div>
+        <div class="full">
+          <label class="label">Observações</label>
+          <textarea class="textarea" id="project-notes"></textarea>
+        </div>
+        <div class="full">
+          <button class="btn" id="project-submit" type="submit">Salvar Planejamento</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="detail-modal-overlay" class="overlay hidden"></div>
+  <div id="detail-modal-wrap" class="modal-wrap hidden">
+    <div class="modal">
+      <div class="modal-head">
+        <strong>Detalhes do Planejamento</strong>
+        <button id="close-detail-modal" class="icon-btn" type="button">×</button>
+      </div>
+      <div id="detail-content"></div>
+      <form id="detail-production-form" class="fields" style="margin-top:14px">
+        <div class="full">
+          <label class="label">Data</label>
+          <input class="input" id="detail-prod-date" type="date" required>
+        </div>
+        <div>
+          <label class="label">Furos feitos no dia</label>
+          <input class="input" id="detail-prod-holes" type="number" min="0" required>
+        </div>
+        <div class="full">
+          <label class="label">Observação</label>
+          <textarea class="textarea" id="detail-prod-notes"></textarea>
+        </div>
+        <div class="full">
+          <button class="btn" id="detail-production-submit" type="submit">Salvar Produção do Dia</button>
+        </div>
+        <div class="full">
+          <button id="delete-project" class="btn danger" type="button">Excluir Planejamento</button>
+        </div>
+      </form>
+      <div id="detail-history" class="list" style="margin-top:14px"></div>
+    </div>
+  </div>
+
+  <div id="confirm-overlay" class="overlay hidden"></div>
+  <div id="confirm-wrap" class="modal-wrap hidden">
+    <div class="modal confirm-modal">
+      <div class="modal-head">
+        <strong>Confirmar ação</strong>
+        <button id="close-confirm" class="icon-btn" type="button">×</button>
+      </div>
+      <div id="confirm-text" class="muted" style="margin-bottom:16px"></div>
+      <div class="fields">
+        <div><button id="confirm-cancel" class="btn alt" type="button">Cancelar</button></div>
+        <div><button id="confirm-ok" class="btn danger" type="button">Confirmar</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="production-edit-overlay" class="overlay hidden"></div>
+  <div id="production-edit-wrap" class="modal-wrap hidden">
+    <div class="modal mini-modal">
+      <div class="modal-head">
+        <strong>Editar Lancamento</strong>
+        <button id="close-production-edit" class="icon-btn" type="button">Ã—</button>
+      </div>
+      <form id="production-edit-form" class="fields">
+        <div class="full">
+          <label class="label">Data</label>
+          <input class="input" id="production-edit-date" type="date" required>
+        </div>
+        <div class="full">
+          <label class="label">Quantidade de furos</label>
+          <input class="input" id="production-edit-holes" type="number" min="0" required>
+        </div>
+        <div class="full">
+          <button class="btn" type="submit">Salvar Edicao</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script>
+const STORAGE_KEY='perfuracao-offline-v1';
+const firebaseConfig=window.__FIREBASE_CONFIG__||{apiKey:'AIzaSyAdFp57jq3Oi_040bJIJnlllYrp5I3MP_w',authDomain:'yanm-e7e80.firebaseapp.com',projectId:'yanm-e7e80',storageBucket:'yanm-e7e80.firebasestorage.app',messagingSenderId:'947763384698',appId:'1:947763384698:web:144f14dcf80c13d71446c3'};
+const collectionName=window.__FIREBASE_COLLECTION__||'planejamento_perfuracao';
+let state={records:[],queue:[],activeProjectId:null},db=null,isSyncing=false,unsubscribe=null;
+let selectedProjectId=null;
+let confirmAction=null;
+let editingProjectId=null;
+let editingProductionId=null;
+
+const $=id=>document.getElementById(id);
+const today=()=>new Date().toISOString().split('T')[0];
+const uid=()=>crypto.randomUUID?crypto.randomUUID():'id-'+Date.now()+Math.random().toString(36).slice(2);
+const save=()=>localStorage.setItem(STORAGE_KEY,JSON.stringify(state));
+const load=()=>{try{state=JSON.parse(localStorage.getItem(STORAGE_KEY))||state}catch{}};
+function toast(message,error){const t=$('toast');t.textContent=message;t.style.background=error?'#7f1d1d':'#14532d';t.style.color=error?'#fecaca':'#dcfce7';t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200)}
+function setStatus(text,kind){const el=$('sync-status');el.textContent=text;el.className='status '+kind}
+function updateStatus(){if(!navigator.onLine)return setStatus(state.queue.length?'Offline com pendências':'Modo offline','offline');if(isSyncing)return setStatus('Sincronizando...','syncing');setStatus(state.queue.length?'Online com fila pendente':'Tudo sincronizado','online')}
+function activeProject(){return state.records.find(r=>r.type==='project'&&r.project_id===state.activeProjectId)||null}
+function projectProductions(pid){return state.records.filter(r=>r.type==='production'&&r.project_id===pid).sort((a,b)=>a.date.localeCompare(b.date))}
+function formatDate(d){if(!d)return'-';const dt=new Date(d+'T00:00:00');return dt.toLocaleDateString('pt-BR')}
+function addDays(base,days){const dt=new Date(base+'T00:00:00');dt.setDate(dt.getDate()+days);return dt.toISOString().split('T')[0]}
+function projectStats(project){
+  const prods=projectProductions(project.project_id);
+  const executed=prods.reduce((sum,r)=>sum+Number(r.holes_done||0),0);
+  const remaining=Math.max(0,Number(project.total_holes)-executed);
+  const avg=prods.length?executed/prods.length:0;
+  const estimatedDate=remaining<=0?today():(avg>0?addDays(today(),Math.ceil(remaining/avg)):project.end_date);
+  const lastDrillDate=prods.length?prods[prods.length-1].date:project.start_date;
+  const daysRemaining=remaining<=0?0:Math.max(0,Math.ceil((new Date(estimatedDate+'T00:00:00')-new Date(lastDrillDate+'T00:00:00'))/86400000));
+  const targetPerDay=remaining>0?Math.ceil(remaining/Math.max(1,daysRemaining)):0;
+  const pct=project.total_holes?Math.round(executed/project.total_holes*100):0;
+  return{prods,executed,remaining,avg,targetPerDay,estimatedDate,pct,daysRemaining,lastDrillDate,done:remaining<=0};
+}
+function openDrawer(){$('drawer').classList.remove('hidden');$('drawer-overlay').classList.remove('hidden')}
+function closeDrawer(){$('drawer').classList.add('hidden');$('drawer-overlay').classList.add('hidden')}
+function openProjectModal(projectId){
+  editingProjectId=projectId||null;
+  const title=$('project-modal-title');
+  const submit=$('project-submit');
+  if(projectId){
+    const project=state.records.find(r=>r.type==='project'&&r.project_id===projectId);
+    if(project){
+      $('project-name').value=project.project_name||'';
+      $('project-holes').value=project.total_holes||'';
+      $('project-start').value=project.start_date||today();
+      $('project-end').value=project.end_date||today();
+      $('project-notes').value=project.notes||'';
+      title.textContent='Editar Planejamento';
+      submit.textContent='Salvar Alterações';
+    }
+  }else{
+    $('project-form').reset();
+    $('project-start').value=today();
+    $('project-end').value=today();
+    title.textContent='Novo Planejamento';
+    submit.textContent='Salvar Planejamento';
+  }
+  $('project-modal-wrap').classList.remove('hidden');
+  $('project-modal-overlay').classList.remove('hidden');
+  $('project-name').focus();
+}
+function closeProjectModal(){$('project-modal-wrap').classList.add('hidden');$('project-modal-overlay').classList.add('hidden');editingProjectId=null}
+function openDetailModal(pid){selectedProjectId=pid;$('detail-prod-date').value=today();$('detail-modal-wrap').classList.remove('hidden');$('detail-modal-overlay').classList.remove('hidden');renderDetailModal()}
+function closeDetailModal(){$('detail-modal-wrap').classList.add('hidden');$('detail-modal-overlay').classList.add('hidden');selectedProjectId=null}
+function resetProductionForm(){
+  editingProductionId=null;
+  $('detail-production-form').reset();
+  $('detail-prod-date').value=today();
+  const button=$('detail-production-submit');
+  if(button)button.textContent='Salvar Produção do Dia';
+}
+function openConfirmModal(message,action){$('confirm-text').textContent=message;confirmAction=action;$('confirm-wrap').classList.remove('hidden');$('confirm-overlay').classList.remove('hidden')}
+function closeConfirmModal(){$('confirm-wrap').classList.add('hidden');$('confirm-overlay').classList.add('hidden');confirmAction=null}
+
+function renderPlanning(){
+  const projects=state.records.filter(r=>r.type==='project').sort((a,b)=>b.created_at.localeCompare(a.created_at));
+  $('planning-empty').classList.toggle('hidden',projects.length>0);
+  $('planning-list').classList.toggle('hidden',projects.length===0);
+  $('planning-list').innerHTML=projects.map(project=>{
+    const s=projectStats(project);
+    return `<button class="item project-card" type="button" data-open-project="${project.project_id}"><div class="project-head"><div class="project-name">${project.project_name}</div><span class="badge ${s.done?'done':'pending'}">${s.done?'Concluído':'Em aberto'}</span></div><div class="project-inline"><span class="project-chip"><span class="project-chip-label">Início</span><span>${formatDate(project.start_date)}</span></span><span class="project-chip"><span class="project-chip-label">Final</span><span>${formatDate(project.end_date)}</span></span><span class="project-chip"><span class="project-chip-label">Furos</span><span>${project.total_holes}</span></span></div></button>`;
+  }).join('');
+  document.querySelectorAll('[data-open-project]').forEach(btn=>btn.onclick=()=>openDetailModal(btn.dataset.openProject));
+}
+function renderPlanning(){
+  const projects=state.records.filter(r=>r.type==='project').sort((a,b)=>b.created_at.localeCompare(a.created_at));
+  $('planning-empty').classList.toggle('hidden',projects.length>0);
+  $('planning-list').classList.toggle('hidden',projects.length===0);
+  $('planning-list').innerHTML=projects.map(project=>{
+    const s=projectStats(project);
+    return `<button class="item project-card" type="button" data-open-project="${project.project_id}"><div class="project-head"><div class="project-name">${project.project_name}</div><span class="badge ${s.done?'done':'pending'}">${s.done?'Concluido':'Em aberto'}</span></div><div class="project-inline"><span class="project-chip"><span class="project-chip-label">Inicio</span><span>${formatDate(project.start_date)}</span></span><span class="project-chip"><span class="project-chip-label">Final</span><span>${formatDate(project.end_date)}</span></span><span class="project-chip"><span class="project-chip-label">Furos</span><span>${s.executed}/${project.total_holes}</span></span></div></button>`;
+  }).join('');
+  document.querySelectorAll('[data-open-project]').forEach(btn=>btn.onclick=()=>openDetailModal(btn.dataset.openProject));
+}
+
+function renderSidebar(){
+  const p=activeProject(),s=p?projectStats(p):null;
+  $('queue-count').textContent=String(state.queue.length);
+  $('drawer-project-name').textContent=p?p.project_name:'Nenhum';
+  $('drawer-summary').innerHTML=!p?'Os dados ficam salvos no aparelho e entram na fila de sincronização.':`<div class="muted">Início: ${formatDate(p.start_date)}</div><div class="muted" style="margin-top:4px">Estimado: ${formatDate(s.estimatedDate)}</div><div class="muted" style="margin-top:4px">${s.done?'Concluído':'Em aberto'}</div>`;
+}
+function renderDetailModal(){
+  const project=state.records.find(r=>r.type==='project'&&r.project_id===selectedProjectId);
+  if(!project)return;
+  const s=projectStats(project);
+  $('detail-content').innerHTML=`<div class="row"><strong>${project.project_name}</strong><div style="display:flex;gap:8px;align-items:center"><button id="edit-project" class="btn alt inline" type="button">Editar</button><span class="badge ${s.done?'done':'pending'}">${s.done?'Concluído':'Em aberto'}</span></div></div><div class="stats" style="margin-top:12px"><div class="stat"><span class="stat-label">Data de início</span><span class="stat-value" style="font-size:18px">${formatDate(project.start_date)}</span></div><div class="stat"><span class="stat-label">Data estimada</span><span class="stat-value" style="font-size:18px">${formatDate(s.estimatedDate)}</span></div><div class="stat"><span class="stat-label">Executados</span><span class="stat-value">${s.executed}</span></div><div class="stat"><span class="stat-label">Restantes</span><span class="stat-value">${s.remaining}</span></div><div class="stat"><span class="stat-label">Dias restantes</span><span class="stat-value">${s.daysRemaining}</span></div><div class="stat"><span class="stat-label">Furos por dia</span><span class="stat-value">${s.targetPerDay}</span></div><div class="stat slim full"><span class="stat-label">Concluído</span><span class="stat-value">${s.pct}%</span></div></div>${project.notes?`<div class="muted" style="margin-top:12px">${project.notes}</div>`:''}`;
+  $('detail-history').innerHTML=s.prods.map(prod=>`<div class="item"><div class="row"><strong>${formatDate(prod.date)}</strong><span class="mono">${prod.holes_done} furos</span></div>${prod.notes?`<div class="muted" style="margin-top:6px">${prod.notes}</div>`:''}<div class="row" style="margin-top:10px"><button class="btn alt inline" type="button" data-edit-production="${prod.local_id}">Editar</button><button class="btn danger inline" type="button" data-delete-production="${prod.local_id}">Excluir</button></div></div>`).join('')||'<div class="muted">Nenhum lançamento diário ainda.</div>';
+  $('edit-project').onclick=()=>{closeDetailModal();openProjectModal(project.project_id);};
+  document.querySelectorAll('[data-edit-production]').forEach(btn=>btn.onclick=()=>startEditProduction(btn.dataset.editProduction));
+  document.querySelectorAll('[data-delete-production]').forEach(btn=>btn.onclick=()=>confirmDeleteProduction(btn.dataset.deleteProduction));
+}
+function render(){renderPlanning();renderSidebar();if(selectedProjectId)renderDetailModal();updateStatus()}
+
+function renderDetailModal(){
+  const project=state.records.find(r=>r.type==='project'&&r.project_id===selectedProjectId);
+  if(!project)return;
+  const s=projectStats(project);
+  const locked=s.done;
+  $('detail-content').innerHTML=`<div class="row"><strong>${project.project_name}</strong><div style="display:flex;gap:8px;align-items:center">${locked?'':`<button id="edit-project" class="btn alt inline" type="button">Editar</button>`}<span class="badge ${s.done?'done':'pending'}">${s.done?'Concluido':'Em aberto'}</span></div></div><div class="stats" style="margin-top:12px"><div class="stat"><span class="stat-label">Data de inicio</span><span class="stat-value" style="font-size:18px">${formatDate(project.start_date)}</span></div><div class="stat"><span class="stat-label">Data estimada</span><span class="stat-value" style="font-size:18px">${formatDate(s.estimatedDate)}</span></div><div class="stat"><span class="stat-label">Executados</span><span class="stat-value">${s.executed}</span></div><div class="stat"><span class="stat-label">Restantes</span><span class="stat-value">${s.remaining}</span></div><div class="stat"><span class="stat-label">Dias restantes</span><span class="stat-value">${s.daysRemaining}</span></div><div class="stat"><span class="stat-label">Furos por dia</span><span class="stat-value">${s.targetPerDay}</span></div><div class="stat slim full"><span class="stat-label">Concluido</span><span class="stat-value">${s.pct}%</span></div></div>${project.notes?`<div class="muted" style="margin-top:12px">${project.notes}</div>`:''}${locked?`<div class="item" style="margin-top:12px">Projeto concluido. Nao e mais permitido editar o planejamento nem lancar novos furos.</div>`:''}`;
+  $('detail-history').innerHTML=s.prods.map(prod=>`<div class="item history-item"><span class="history-date">${formatDate(prod.date)}</span><span class="mono history-holes">${prod.holes_done} furos</span>${locked?'':`<button class="icon-action" type="button" aria-label="Editar lancamento" data-edit-production="${prod.local_id}">&#9998;</button><button class="icon-action danger" type="button" aria-label="Excluir lancamento" data-delete-production="${prod.local_id}">&#128465;</button>`}</div>`).join('')||'<div class="muted">Nenhum lancamento diario ainda.</div>';
+  $('detail-production-form').classList.toggle('hidden',locked);
+  if(!locked){
+    const editProject=$('edit-project');
+    if(editProject)editProject.onclick=()=>{closeDetailModal();openProjectModal(project.project_id);};
+    document.querySelectorAll('[data-edit-production]').forEach(btn=>btn.onclick=()=>startEditProduction(btn.dataset.editProduction));
+    document.querySelectorAll('[data-delete-production]').forEach(btn=>btn.onclick=()=>confirmDeleteProduction(btn.dataset.deleteProduction));
+  }else{
+    resetProductionForm();
+  }
+}
+
+function enqueue(op){state.queue.push(op);save();render()}
+function mergeRemoteWithLocal(remote){
+  const merged=new Map();
+  remote.forEach(item=>{
+    const key=item.local_id||item.firebase_id||uid();
+    merged.set(key,item);
+  });
+  state.records.forEach(item=>{
+    const key=item.local_id||item.firebase_id;
+    if(!key)return;
+    const exists=[...merged.values()].some(remoteItem=>
+      (item.local_id&&remoteItem.local_id===item.local_id) ||
+      (remoteItem.type===item.type &&
+       (remoteItem.project_id||'')===(item.project_id||'') &&
+       (remoteItem.date||'')===(item.date||'') &&
+       Number(remoteItem.holes_done||0)===Number(item.holes_done||0) &&
+       (remoteItem.created_at||'')===(item.created_at||''))
+    );
+    if(!exists)merged.set(key,item);
+  });
+  state.records=[...merged.values()];
+}
+async function loadScript(src){
+  if(document.querySelector(`script[src="${src}"]`))return;
+  await new Promise((resolve,reject)=>{
+    const script=document.createElement('script');
+    script.src=src;
+    script.onload=resolve;
+    script.onerror=reject;
+    document.head.appendChild(script);
+  });
+}
+async function ensureFirebase(){
+  if(db||!navigator.onLine)return !!db;
+  if(!window.firebase){
+    await loadScript('https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js');
+    await loadScript('https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js');
+  }
+  if(!window.firebase)return false;
+  if(!window.firebase.apps.length)window.firebase.initializeApp(firebaseConfig);
+  db=window.firebase.firestore();
+  return true;
+}
+async function sync(){
+  if(isSyncing||!state.queue.length||!navigator.onLine)return updateStatus();
+  try{
+    isSyncing=true;updateStatus();
+    const ready=await ensureFirebase();
+    if(!ready)return;
+    for(let i=0;i<state.queue.length;i++){
+      const op=state.queue[i];
+      if(op.type==='upsert'){
+        if(op.firebase_id){
+          await db.collection(collectionName).doc(op.firebase_id).set(op.payload,{merge:true});
+          const rec=state.records.find(r=>r.local_id===op.payload.local_id);
+          if(rec)rec.firebase_id=op.firebase_id;
+        }else{
+          const ref=await db.collection(collectionName).add(op.payload);
+          const rec=state.records.find(r=>r.local_id===op.payload.local_id);
+          if(rec)rec.firebase_id=ref.id;
+        }
+      }else if(op.type==='delete'&&op.firebase_id){
+        await db.collection(collectionName).doc(op.firebase_id).delete();
+      }
+    }
+    state.queue=[];save();render();
+    toast('Salvo no aparelho e enviado ao Firebase.');
+    if(unsubscribe)unsubscribe();
+    unsubscribe=db.collection(collectionName).orderBy('created_at','desc').onSnapshot(snap=>{
+      const remote=snap.docs.map(doc=>({firebase_id:doc.id,...doc.data()}));
+      mergeRemoteWithLocal(remote);
+      save();render();
+    });
+  }catch(error){console.error(error)}finally{isSyncing=false;updateStatus()}
+}
+
+function recordProject(data){
+  const existing=editingProjectId?state.records.find(r=>r.type==='project'&&r.project_id===editingProjectId):null;
+  const local_id=existing?.local_id||uid();
+  const payload={type:'project',local_id,project_id:existing?.project_id||local_id,project_name:data.name,total_holes:Number(data.holes),start_date:data.start,end_date:data.end,notes:data.notes,status:'active',created_at:existing?.created_at||new Date().toISOString()};
+  if(existing)Object.assign(existing,payload);
+  else state.records.push(payload);
+  state.activeProjectId=payload.project_id;
+  enqueue({type:'upsert',payload,firebase_id:existing?.firebase_id||null});
+  save();render();sync();
+}
+function recordProduction(data,pid){
+  const p=state.records.find(r=>r.type==='project'&&r.project_id===pid)||activeProject();
+  if(!p){
+    toast('Crie um planejamento primeiro',true);
+    return false;
+  }
+  const duplicate=state.records.find(r=>r.type==='production'&&r.project_id===p.project_id&&r.date===data.date);
+  if(duplicate)return toast('Já existe um lançamento para essa data.',true);
+  const payload={type:'production',local_id:uid(),project_id:p.project_id,date:data.date,holes_done:Number(data.holes),notes:data.notes,created_at:new Date().toISOString()};
+  state.records.push(payload);
+  enqueue({type:'upsert',payload,firebase_id:null});
+  save();render();sync();
+}
+function deleteProjectById(pid){
+  const related=state.records.filter(r=>r.project_id===pid||(r.type==='project'&&r.project_id===pid));
+  related.forEach(record=>{
+    if(record.firebase_id)enqueue({type:'delete',firebase_id:record.firebase_id});
+  });
+  state.records=state.records.filter(r=>r.project_id!==pid && !(r.type==='project'&&r.project_id===pid));
+  if(state.activeProjectId===pid)state.activeProjectId=state.records.find(r=>r.type==='project')?.project_id||null;
+  save();
+  render();
+  closeDetailModal();
+  sync();
+}
+function startEditProduction(localId){
+  const record=state.records.find(r=>r.type==='production'&&r.local_id===localId);
+  if(!record)return;
+  editingProductionId=localId;
+  $('detail-prod-date').value=record.date||today();
+  $('detail-prod-holes').value=record.holes_done||'';
+  $('detail-prod-notes').value=record.notes||'';
+  $('detail-production-submit').textContent='Salvar Edição';
+}
+function deleteProductionById(localId){
+  const record=state.records.find(r=>r.type==='production'&&r.local_id===localId);
+  if(!record)return;
+  if(record.firebase_id)enqueue({type:'delete',firebase_id:record.firebase_id});
+  state.records=state.records.filter(r=>r.local_id!==localId);
+  save();
+  render();
+  resetProductionForm();
+  sync();
+}
+function confirmDeleteProduction(localId){
+  openConfirmModal('Deseja excluir este lançamento diário?',()=>{
+    deleteProductionById(localId);
+    toast('Lançamento excluído');
+  });
+}
+
+function recordProduction(data,pid){
+  const p=state.records.find(r=>r.type==='project'&&r.project_id===pid)||activeProject();
+  if(!p)return toast('Crie um planejamento primeiro',true);
+  const holesDone=Number(data.holes);
+  const existing=editingProductionId?state.records.find(r=>r.type==='production'&&r.local_id===editingProductionId):null;
+  const duplicate=state.records.find(r=>
+    r.type==='production' &&
+    r.project_id===p.project_id &&
+    r.date===data.date &&
+    Number(r.holes_done)===holesDone &&
+    r.local_id!==existing?.local_id
+  );
+  if(duplicate)return toast('Já existe um lançamento com essa data e essa quantidade.',true);
+  const payload={
+    type:'production',
+    local_id:existing?.local_id||uid(),
+    project_id:p.project_id,
+    date:data.date,
+    holes_done:holesDone,
+    notes:data.notes,
+    created_at:existing?.created_at||new Date().toISOString()
+  };
+  if(existing)Object.assign(existing,payload);
+  else state.records.push(payload);
+  enqueue({type:'upsert',payload,firebase_id:existing?.firebase_id||null});
+  save();
+  render();
+  resetProductionForm();
+  sync();
+}
+
+function startEditProduction(localId){
+  const record=state.records.find(r=>r.type==='production'&&r.local_id===localId);
+  if(!record)return;
+  editingProductionId=localId;
+  $('detail-prod-date').value=record.date||today();
+  $('detail-prod-holes').value=record.holes_done||'';
+  $('detail-prod-notes').value=record.notes||'';
+  $('detail-production-submit').textContent='Salvar Edição';
+}
+
+function confirmDeleteProduction(localId){
+  openConfirmModal('Deseja excluir este lançamento diário?',()=>{
+    deleteProductionById(localId);
+    toast('Lançamento excluído');
+  });
+}
+
+document.querySelectorAll('.tab').forEach(btn=>btn.onclick=()=>{
+  document.querySelectorAll('.tab').forEach(item=>item.classList.toggle('active',item.dataset.tab===btn.dataset.tab));
+  document.querySelectorAll('[id^="tab-"]').forEach(sec=>sec.classList.add('hidden'));
+  $('tab-'+btn.dataset.tab).classList.remove('hidden');
+  closeDrawer();
+});
+
+function recordProduction(data,pid){
+  const p=state.records.find(r=>r.type==='project'&&r.project_id===pid)||activeProject();
+  if(!p)return toast('Crie um planejamento primeiro',true);
+  const holesDone=Number(data.holes);
+  const existing=editingProductionId?state.records.find(r=>r.type==='production'&&r.local_id===editingProductionId):null;
+  const duplicate=state.records.find(r=>
+    r.type==='production' &&
+    r.project_id===p.project_id &&
+    r.date===data.date &&
+    Number(r.holes_done)===holesDone &&
+    r.local_id!==existing?.local_id
+  );
+  if(duplicate){
+    toast('Ja existe um lancamento com essa data e essa quantidade.',true);
+    return false;
+  }
+  const payload={
+    type:'production',
+    local_id:existing?.local_id||uid(),
+    project_id:p.project_id,
+    date:data.date,
+    holes_done:holesDone,
+    notes:data.notes,
+    created_at:existing?.created_at||new Date().toISOString()
+  };
+  if(existing)Object.assign(existing,payload);
+  else state.records.push(payload);
+  enqueue({type:'upsert',payload,firebase_id:existing?.firebase_id||null});
+  save();
+  render();
+  resetProductionForm();
+  sync();
+  return true;
+}
+
+function startEditProduction(localId){
+  const record=state.records.find(r=>r.type==='production'&&r.local_id===localId);
+  if(!record)return;
+  editingProductionId=localId;
+  $('detail-prod-date').value=record.date||today();
+  $('detail-prod-holes').value=record.holes_done||'';
+  $('detail-prod-notes').value=record.notes||'';
+  $('detail-production-submit').textContent='Salvar Edicao';
+}
+
+function confirmDeleteProduction(localId){
+  openConfirmModal('Deseja excluir este lancamento diario?',()=>{
+    deleteProductionById(localId);
+    toast('Lancamento excluido');
+  });
+}
+
+function isProjectLocked(projectId){
+  const project=state.records.find(r=>r.type==='project'&&r.project_id===projectId);
+  if(!project)return false;
+  return projectStats(project).done;
+}
+
+function openProjectModal(projectId){
+  if(projectId && isProjectLocked(projectId)){
+    toast('Projeto concluido nao pode mais ser editado.',true);
+    return;
+  }
+  editingProjectId=projectId||null;
+  const title=$('project-modal-title');
+  const submit=$('project-submit');
+  if(projectId){
+    const project=state.records.find(r=>r.type==='project'&&r.project_id===projectId);
+    if(project){
+      $('project-name').value=project.project_name||'';
+      $('project-holes').value=project.total_holes||'';
+      $('project-start').value=project.start_date||today();
+      $('project-end').value=project.end_date||today();
+      $('project-notes').value=project.notes||'';
+      title.textContent='Editar Planejamento';
+      submit.textContent='Salvar Alteracoes';
+    }
+  }else{
+    $('project-form').reset();
+    $('project-start').value=today();
+    $('project-end').value=today();
+    title.textContent='Novo Planejamento';
+    submit.textContent='Salvar Planejamento';
+  }
+  $('project-modal-wrap').classList.remove('hidden');
+  $('project-modal-overlay').classList.remove('hidden');
+  $('project-name').focus();
+}
+
+function recordProject(data){
+  const existing=editingProjectId?state.records.find(r=>r.type==='project'&&r.project_id===editingProjectId):null;
+  if(existing && projectStats(existing).done){
+    toast('Projeto concluido nao pode mais ser editado.',true);
+    return false;
+  }
+  const local_id=existing?.local_id||uid();
+  const payload={type:'project',local_id,project_id:existing?.project_id||local_id,project_name:data.name,total_holes:Number(data.holes),start_date:data.start,end_date:data.end,notes:data.notes,status:'active',created_at:existing?.created_at||new Date().toISOString()};
+  if(existing)Object.assign(existing,payload);
+  else state.records.push(payload);
+  state.activeProjectId=payload.project_id;
+  enqueue({type:'upsert',payload,firebase_id:existing?.firebase_id||null});
+  save();render();sync();
+  return true;
+}
+
+function renderDetailModal(){
+  const project=state.records.find(r=>r.type==='project'&&r.project_id===selectedProjectId);
+  if(!project)return;
+  const s=projectStats(project);
+  const locked=s.done;
+  $('detail-content').innerHTML=`<div class="row"><strong>${project.project_name}</strong><div style="display:flex;gap:8px;align-items:center">${locked?'':`<button id="edit-project" class="btn alt inline" type="button">Editar</button>`}<span class="badge ${s.done?'done':'pending'}">${s.done?'Concluido':'Em aberto'}</span></div></div><div class="stats" style="margin-top:12px"><div class="stat"><span class="stat-label">Data de inicio</span><span class="stat-value" style="font-size:18px">${formatDate(project.start_date)}</span></div><div class="stat"><span class="stat-label">Data estimada</span><span class="stat-value" style="font-size:18px">${formatDate(s.estimatedDate)}</span></div><div class="stat"><span class="stat-label">Executados</span><span class="stat-value">${s.executed}</span></div><div class="stat"><span class="stat-label">Restantes</span><span class="stat-value">${s.remaining}</span></div><div class="stat"><span class="stat-label">Dias restantes</span><span class="stat-value">${s.daysRemaining}</span></div><div class="stat"><span class="stat-label">Furos por dia</span><span class="stat-value">${s.targetPerDay}</span></div><div class="stat slim full"><span class="stat-label">Concluido</span><span class="stat-value">${s.pct}%</span></div></div>${project.notes?`<div class="muted" style="margin-top:12px">${project.notes}</div>`:''}${locked?`<div class="item" style="margin-top:12px">Projeto concluido. Nao e mais permitido editar o planejamento nem lancar novos furos.</div>`:''}`;
+  $('detail-history').innerHTML=s.prods.map(prod=>`<div class="item history-item"><span class="history-date">${formatDate(prod.date)}</span><span class="mono history-holes">${prod.holes_done} furos</span>${locked?'':`<button class="icon-action" type="button" aria-label="Editar lancamento" data-edit-production="${prod.local_id}">&#9998;</button><button class="icon-action danger" type="button" aria-label="Excluir lancamento" data-delete-production="${prod.local_id}">&#128465;</button>`}</div>`).join('')||'<div class="muted">Nenhum lancamento diario ainda.</div>';
+  $('detail-production-form').classList.toggle('hidden',locked);
+  if(!locked){
+    const editProject=$('edit-project');
+    if(editProject)editProject.onclick=()=>{closeDetailModal();openProjectModal(project.project_id);};
+    document.querySelectorAll('[data-edit-production]').forEach(btn=>btn.onclick=()=>startEditProduction(btn.dataset.editProduction));
+    document.querySelectorAll('[data-delete-production]').forEach(btn=>btn.onclick=()=>confirmDeleteProduction(btn.dataset.deleteProduction));
+  }else{
+    resetProductionForm();
+  }
+}
+
+function recordProduction(data,pid){
+  const p=state.records.find(r=>r.type==='project'&&r.project_id===pid)||activeProject();
+  if(!p){
+    toast('Crie um planejamento primeiro',true);
+    return false;
+  }
+  if(projectStats(p).done){
+    toast('Projeto concluido nao aceita novos lancamentos.',true);
+    return false;
+  }
+  const holesDone=Number(data.holes);
+  const existing=editingProductionId?state.records.find(r=>r.type==='production'&&r.local_id===editingProductionId):null;
+  const duplicate=state.records.find(r=>
+    r.type==='production' &&
+    r.project_id===p.project_id &&
+    r.date===data.date &&
+    Number(r.holes_done)===holesDone &&
+    r.local_id!==existing?.local_id
+  );
+  if(duplicate){
+    toast('Ja existe um lancamento com essa data e essa quantidade.',true);
+    return false;
+  }
+  const payload={type:'production',local_id:existing?.local_id||uid(),project_id:p.project_id,date:data.date,holes_done:holesDone,notes:data.notes,created_at:existing?.created_at||new Date().toISOString()};
+  if(existing)Object.assign(existing,payload);
+  else state.records.push(payload);
+  enqueue({type:'upsert',payload,firebase_id:existing?.firebase_id||null});
+  save();
+  render();
+  resetProductionForm();
+  sync();
+  return true;
+}
+
+function startEditProduction(localId){
+  const record=state.records.find(r=>r.type==='production'&&r.local_id===localId);
+  if(!record)return;
+  if(isProjectLocked(record.project_id)){
+    toast('Projeto concluido nao permite editar lancamentos.',true);
+    return;
+  }
+  editingProductionId=localId;
+  $('detail-prod-date').value=record.date||today();
+  $('detail-prod-holes').value=record.holes_done||'';
+  $('detail-prod-notes').value=record.notes||'';
+  $('detail-production-submit').textContent='Salvar Edicao';
+}
+
+function deleteProductionById(localId){
+  const record=state.records.find(r=>r.type==='production'&&r.local_id===localId);
+  if(!record)return;
+  if(isProjectLocked(record.project_id)){
+    toast('Projeto concluido nao permite excluir lancamentos.',true);
+    return;
+  }
+  if(record.firebase_id)enqueue({type:'delete',firebase_id:record.firebase_id});
+  state.records=state.records.filter(r=>r.local_id!==localId);
+  save();
+  render();
+  resetProductionForm();
+  sync();
+}
+
+function confirmDeleteProduction(localId){
+  const record=state.records.find(r=>r.type==='production'&&r.local_id===localId);
+  if(record && isProjectLocked(record.project_id)){
+    toast('Projeto concluido nao permite excluir lancamentos.',true);
+    return;
+  }
+  openConfirmModal('Deseja excluir este lancamento diario?',()=>{
+    deleteProductionById(localId);
+    toast('Lancamento excluido');
+  });
+}
+
+$('project-start').value=today();
+$('project-end').value=today();
+$('detail-prod-date').value=today();
+
+$('project-form').onsubmit=e=>{
+  e.preventDefault();
+  const start=$('project-start').value,end=$('project-end').value;
+  if(new Date(end)<new Date(start))return toast('A data final deve ser igual ou maior que a inicial',true);
+  recordProject({name:$('project-name').value.trim(),holes:$('project-holes').value,start,end,notes:$('project-notes').value.trim()});
+  e.target.reset();
+  $('project-start').value=today();
+  $('project-end').value=today();
+  closeProjectModal();
+  toast(navigator.onLine?(editingProjectId?'Alterações salvas. Enviando ao Firebase...':'Planejamento salvo no aparelho. Enviando ao Firebase...'):'Planejamento salvo no aparelho. Aguardando internet.');
+};
+
+$('detail-production-form').onsubmit=e=>{
+  e.preventDefault();
+  recordProduction({date:$('detail-prod-date').value,holes:$('detail-prod-holes').value,notes:$('detail-prod-notes').value.trim()},selectedProjectId);
+  e.target.reset();
+  $('detail-prod-date').value=today();
+  toast('Produção salva localmente');
+};
+
+$('detail-production-form').onsubmit=e=>{
+  e.preventDefault();
+  const wasEditing=Boolean(editingProductionId);
+  const saved=recordProduction({date:$('detail-prod-date').value,holes:$('detail-prod-holes').value,notes:$('detail-prod-notes').value.trim()},selectedProjectId);
+  if(!saved)return;
+  toast(wasEditing?'Lancamento atualizado':'Producao salva no aparelho');
+};
+
+$('project-form').onsubmit=e=>{
+  e.preventDefault();
+  const start=$('project-start').value,end=$('project-end').value;
+  if(new Date(end)<new Date(start))return toast('A data final deve ser igual ou maior que a inicial',true);
+  const wasEditing=Boolean(editingProjectId);
+  const saved=recordProject({name:$('project-name').value.trim(),holes:$('project-holes').value,start,end,notes:$('project-notes').value.trim()});
+  if(!saved)return;
+  e.target.reset();
+  $('project-start').value=today();
+  $('project-end').value=today();
+  closeProjectModal();
+  toast(navigator.onLine?(wasEditing?'Alteracoes salvas. Enviando ao Firebase...':'Planejamento salvo no aparelho. Enviando ao Firebase...'):'Planejamento salvo no aparelho. Aguardando internet.');
+};
+
+function openProductionEditModal(localId){
+  const record=state.records.find(r=>r.type==='production'&&r.local_id===localId);
+  if(!record)return;
+  editingProductionId=localId;
+  $('production-edit-date').value=record.date||today();
+  $('production-edit-holes').value=record.holes_done||'';
+  $('production-edit-wrap').classList.remove('hidden');
+  $('production-edit-overlay').classList.remove('hidden');
+}
+
+function closeProductionEditModal(){
+  $('production-edit-wrap').classList.add('hidden');
+  $('production-edit-overlay').classList.add('hidden');
+  editingProductionId=null;
+}
+
+function startEditProduction(localId){
+  const record=state.records.find(r=>r.type==='production'&&r.local_id===localId);
+  if(!record)return;
+  if(isProjectLocked(record.project_id)){
+    toast('Projeto concluido nao permite editar lancamentos.',true);
+    return;
+  }
+  openProductionEditModal(localId);
+}
+
+$('production-edit-form').onsubmit=e=>{
+  e.preventDefault();
+  const record=editingProductionId?state.records.find(r=>r.type==='production'&&r.local_id===editingProductionId):null;
+  if(!record)return;
+  const saved=recordProduction({date:$('production-edit-date').value,holes:$('production-edit-holes').value,notes:record.notes||''},record.project_id);
+  if(!saved)return;
+  closeProductionEditModal();
+  toast('Lancamento atualizado');
+};
+
+$('open-drawer').onclick=openDrawer;
+$('close-drawer').onclick=closeDrawer;
+$('drawer-overlay').onclick=closeDrawer;
+$('open-project-modal').onclick=openProjectModal;
+$('close-project-modal').onclick=closeProjectModal;
+$('project-modal-overlay').onclick=closeProjectModal;
+$('close-detail-modal').onclick=closeDetailModal;
+$('detail-modal-overlay').onclick=closeDetailModal;
+$('delete-project').onclick=()=>{
+  if(!selectedProjectId)return;
+  openConfirmModal('Deseja excluir este planejamento e todos os lançamentos dele?',()=>{
+    deleteProjectById(selectedProjectId);
+    toast('Planejamento excluído');
+  });
+};
+$('sync-now').onclick=()=>sync();
+$('clear-local').onclick=()=>openConfirmModal('Apagar todos os dados locais deste aparelho?',()=>{state={records:[],queue:[],activeProjectId:null};save();render();closeDrawer();toast('Dados locais apagados')});
+$('close-confirm').onclick=closeConfirmModal;
+$('confirm-cancel').onclick=closeConfirmModal;
+$('confirm-overlay').onclick=closeConfirmModal;
+$('close-production-edit').onclick=closeProductionEditModal;
+$('production-edit-overlay').onclick=closeProductionEditModal;
+$('confirm-ok').onclick=()=>{if(confirmAction)confirmAction();closeConfirmModal();};
+
+window.addEventListener('online',()=>{updateStatus();sync();toast('Internet restabelecida. Sincronizando...')});
+window.addEventListener('offline',()=>{updateStatus();toast('Sem internet. O app continua funcionando offline.',true)});
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js').catch(()=>{}));
+
+load();
+render();
+sync();
+  </script>
+</body>
+</html>
