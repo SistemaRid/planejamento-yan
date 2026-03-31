@@ -30,9 +30,11 @@
     .main{display:flex;flex-direction:column;gap:10px}
     .card{padding:14px}
     .fields{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .fields>*{min-width:0}
     .full{grid-column:1/-1}
     .label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}
-    .input,.textarea{width:100%;padding:11px 12px;background:#0f172a;color:var(--text);border:1px solid var(--line);border-radius:12px}
+    .input,.textarea{width:100%;max-width:100%;min-width:0;padding:11px 12px;background:#0f172a;color:var(--text);border:1px solid var(--line);border-radius:12px}
+    input[type="date"]{display:block}
     .textarea{min-height:92px;resize:vertical}
     .stats{display:grid;grid-template-columns:1fr 1fr;gap:10px}
     .stat{padding:12px;border-radius:14px;background:#111b2c;border:1px solid var(--line)}
@@ -67,13 +69,14 @@
     .drawer .card{margin-bottom:12px}
     .drawer-tabs{display:grid;grid-template-columns:1fr;gap:8px;margin-bottom:12px}
     .modal-wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:10px;z-index:30}
-    .modal{width:min(680px,100%);max-height:92vh;overflow:auto;padding:16px}
+    .modal{width:min(680px,100%);max-width:100%;max-height:92vh;overflow:auto;overflow-x:hidden;padding:16px}
     .confirm-modal{width:min(420px,100%);padding:18px}
     .mini-modal{width:min(380px,100%);padding:18px}
     @media (max-width:640px){
       .app{padding:8px}.sub{display:none}.tabs,.fields{grid-template-columns:1fr}.title{font-size:17px}
       .actions .status{display:none}
       .btn.inline{padding:10px;font-size:13px}
+      input[type="date"]{font-size:16px}
       .project-name{font-size:17px}
       .project-inline{gap:5px}
       .project-chip{font-size:10px;padding:6px 7px;gap:4px}
