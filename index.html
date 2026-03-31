@@ -900,6 +900,8 @@ $('confirm-ok').onclick=()=>{if(confirmAction)confirmAction();closeConfirmModal(
 
 window.addEventListener('online',()=>{updateStatus();sync();toast('Internet restabelecida. Sincronizando...')});
 window.addEventListener('offline',()=>{updateStatus();toast('Sem internet. O app continua funcionando offline.',true)});
+window.addEventListener('focus',()=>{if(navigator.onLine)sync()});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&navigator.onLine)sync()});
 if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js').catch(()=>{}));
 
 load();
